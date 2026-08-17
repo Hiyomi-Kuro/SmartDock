@@ -1,0 +1,11 @@
+- Setting to override theme transparency for the Dock
+- Ability to configure Dock items per screen orientation
+- Redesigned Quick settings/Notifications panel
+- Improved switching between displays
+- Improved apps menu loading speed and sizing
+- Drop support for Android 9 and below
+- Shizuku integration(beta):
+  - Display real app tasks on the Dock
+  - Control Wi-Fi and Bluetooth directly
+  - Resize and snap app windows in free form
+  - Ability to close app windows

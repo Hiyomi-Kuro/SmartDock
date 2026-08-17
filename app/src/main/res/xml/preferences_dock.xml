@@ -1,0 +1,48 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="Dock elements">
+     <PreferenceScreen
+         android:title="@string/dock_elements_portrait"
+         android:fragment="cu.axel.smartdock.fragments.DockElementsPreferences"/>
+        <PreferenceScreen
+            android:title="@string/dock_elements_landscape"
+            android:fragment="cu.axel.smartdock.fragments.DockElementsLandscapePreferences"/>
+    </PreferenceCategory>
+    <PreferenceCategory android:title="@string/behaviour">
+        <ListPreference
+            android:defaultValue="swipe"
+            android:entries="@array/activation_methods"
+            android:entryValues="@array/activation_method_values"
+            android:key="activation_method"
+            android:summary="@string/activation_method_summary"
+            android:title="@string/activation_method" />
+
+        <cu.axel.smartdock.preferences.SliderPreference
+            android:defaultValue="0.5"
+            android:inputType="number"
+            android:key="handle_opacity"
+            android:title="@string/handle_opacity" />
+
+        <ListPreference
+            android:defaultValue="start"
+            android:entries="@array/handle_positions"
+            android:entryValues="@array/handle_positions_values"
+            android:key="handle_position"
+            android:title="@string/handle_position" />
+
+        <cu.axel.smartdock.preferences.SliderPreference
+            android:defaultValue="10"
+            android:key="dock_activation_area"
+            android:summary="@string/dock_activation_area_summary"
+            android:title="@string/dock_activation_area_title" />
+
+        <Preference
+            android:key="auto_pin"
+            android:summary="@string/auto_pin_summary"
+            android:title="@string/auto_pin_title" />
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="center_running_apps"
+            android:title="@string/center_running_apps_title" />
+    </PreferenceCategory>
+</PreferenceScreen>
