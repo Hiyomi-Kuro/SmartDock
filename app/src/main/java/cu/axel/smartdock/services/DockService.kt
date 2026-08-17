@@ -1537,7 +1537,7 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
         dockLayout.setBackgroundResource(
             if (sharedPreferences.getBoolean(
                     "round_dock",
-                    false
+                    true
                 )
             ) R.drawable.round_rect else R.drawable.rect
         )
@@ -2199,8 +2199,15 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
 
         dockHeight =
             Utils.dpToPx(context, sharedPreferences.getString("dock_height", "56")!!.toInt())
+        val dockSideMargin = Utils.dpToPx(context, 20)
+        val dockBottomMargin = Utils.dpToPx(context, 10)
+        val dockDisplayId =
+            if (preferSecondaryDisplay) DeviceUtils.getSecondaryDisplay(context).displayId
+            else Display.DEFAULT_DISPLAY
+        val dockWidth =
+            (DeviceUtils.getDisplayBounds(context, dockDisplayId).width() - dockSideMargin * 2).coerceAtLeast(Utils.dpToPx(context, 240))
         dockLayoutParams =
-            Utils.makeWindowParams(-1, dockHeight, context, preferSecondaryDisplay)
+            Utils.makeWindowParams(dockWidth, dockHeight, context, preferSecondaryDisplay)
         dockLayoutParams.screenOrientation =
             if (sharedPreferences.getBoolean("lock_landscape", false))
                 ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
@@ -2215,7 +2222,8 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
         loadPinnedApps()
         placeRunningApps()
 
-        dockLayoutParams.gravity = Gravity.BOTTOM or Gravity.START
+        dockLayoutParams.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+        dockLayoutParams.y = dockBottomMargin
         windowManager.addView(dock, dockLayoutParams)
 
         //Dock handle
