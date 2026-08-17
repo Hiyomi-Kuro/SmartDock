@@ -8,7 +8,7 @@ android {
     namespace "cu.axel.smartdock"
 	
     defaultConfig {
-        applicationId "cu.axel.smartdock"
+        applicationId "com.kaori.smartdock"
         minSdk 30
         targetSdk 36
         versionCode 1150
