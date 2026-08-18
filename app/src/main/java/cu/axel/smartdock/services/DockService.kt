@@ -2136,6 +2136,8 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
             override fun onSwipe(direction: Direction): Boolean {
                 if (direction == Direction.DOWN) {
                     if (appMenuVisible) hideAppMenu() else unpinDock()
+                } else if (direction == Direction.UP) {
+                    if (!appMenuVisible) showAppMenu()
                 } else if (direction == Direction.LEFT) {
                     performGlobalAction(GLOBAL_ACTION_BACK)
                 }
