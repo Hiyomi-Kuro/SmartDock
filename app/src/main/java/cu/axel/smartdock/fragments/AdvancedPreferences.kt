@@ -110,7 +110,7 @@ class AdvancedPreferences : PreferenceFragmentCompat() {
                 slider.value =
                     dockHeight.sharedPreferences!!.getString(dockHeight.key, "56")!!.toFloat()
                 slider.valueFrom = 50f
-                slider.valueTo = 70f
+                slider.valueTo = 120f
                 slider.addOnChangeListener { _, value, _
                     ->
                     dockHeight.sharedPreferences!!.edit {

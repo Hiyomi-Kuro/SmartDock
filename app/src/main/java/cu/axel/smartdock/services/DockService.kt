@@ -2199,7 +2199,7 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
 
         dockHeight =
             Utils.dpToPx(context, sharedPreferences.getString("dock_height", "56")!!.toInt())
-        val dockSideMargin = Utils.dpToPx(context, 20)
+        val dockSideMargin = Utils.dpToPx(context, 8)
         val dockBottomMargin = Utils.dpToPx(context, 10)
         val dockDisplayId =
             if (preferSecondaryDisplay) DeviceUtils.getSecondaryDisplay(context).displayId
