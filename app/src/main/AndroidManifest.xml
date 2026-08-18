@@ -62,6 +62,13 @@
                 <category android:name="android.intent.category.SECONDARY_HOME" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".activities.ShowDockActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.NoDisplay" />
         <activity android:name=".activities.DebugActivity" />
 
         <service

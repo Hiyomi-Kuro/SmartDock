@@ -137,6 +137,7 @@ import java.net.URLEncoder
 const val DOCK_SERVICE_CONNECTED = "service_connected"
 const val ACTION_BIND_NOTIFICATION_SERVICE = "bind_notification_service"
 const val ACTION_LAUNCH_APP = "launch_app"
+const val ACTION_SHOW_DOCK = "show_dock"
 const val DESKTOP_APP_PINNED = "desktop_app_pinned"
 const val DOCK_SERVICE_ACTION = "dock_service_action"
 
@@ -272,6 +273,7 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
             override fun onReceive(context: Context, intent: Intent) {
                 when (intent.getStringExtra("action")) {
                     LAUNCHER_RESUMED -> pinDock()
+                    ACTION_SHOW_DOCK -> showDock()
                     ACTION_LAUNCH_APP -> launchApp(
                         intent.getStringExtra("mode"),
                         intent.getStringExtra("app")!!
