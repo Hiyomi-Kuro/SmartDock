@@ -177,6 +177,7 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
     private lateinit var searchEntry: LinearLayout
     private lateinit var dockLayout: RelativeLayout
     private lateinit var windowManager: WindowManager
+    private var freeformControlOverlay: View? = null
     private lateinit var appsSeparator: View
     private var appMenuVisible = false
     private var powerMenuVisible = false
@@ -349,6 +350,9 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
             }
 
             override fun onDisplayChanged(displayId: Int) {
+                if (::dockLayoutParams.isInitialized) {
+                    dock?.post { updateDockBounds() }
+                }
             }
         }
 
@@ -430,6 +434,7 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
             if (app.tasks[0].windowingMode == WINDOWING_MODE_FREEFORM) {
                 actions.add(Action(R.drawable.ic_launch_mode, getString(R.string.resize)))
                 actions.add(Action(R.drawable.ic_snap_top, getString(R.string.snap)))
+                actions.add(Action(R.drawable.ic_dock, getString(R.string.dock)))
             }
             actions.add(Action(R.drawable.ic_close, getString(R.string.close)))
         }
@@ -779,15 +784,11 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
         dock!!.isVisible = !keyguardManager.isKeyguardLocked
         dockHandle!!.visibility = View.GONE
 
-        if (dockLayoutParams.height != dockHeight) {
-            dockLayoutParams.height = dockHeight
-            windowManager.updateViewLayout(dock, dockLayoutParams)
-        }
-
         dockHandler.removeCallbacksAndMessages(null)
         updateRunningTasks()
         val anim = AnimationUtils.loadAnimation(context, R.anim.slide_up)
         dockLayout.visibility = View.VISIBLE
+        updateDockBounds()
         dockLayout.startAnimation(anim)
     }
 
@@ -817,10 +818,7 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
                         val activationMethod =
                             sharedPreferences.getString("activation_method", "swipe")!!
                         if (activationMethod == "swipe") {
-                            val height =
-                                sharedPreferences.getString("dock_activation_area", "10")!!.toInt()
-                            dockLayoutParams.height = Utils.dpToPx(context, height)
-                            windowManager.updateViewLayout(dock, dockLayoutParams)
+                            updateDockBounds()
                         } else {
                             dock!!.visibility = View.GONE
                             dockHandle!!.visibility = View.VISIBLE
@@ -1134,6 +1132,7 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
                     actions.add(Action(R.drawable.ic_standard, getString(R.string.standard)))
                     actions.add(Action(R.drawable.ic_maximized, getString(R.string.maximized)))
                     actions.add(Action(R.drawable.ic_portrait, getString(R.string.portrait)))
+                    actions.add(Action(R.drawable.ic_dock, getString(R.string.dock)))
                     actions.add(Action(R.drawable.ic_fullscreen, getString(R.string.fullscreen)))
                     actionsLv.adapter = AppActionsAdapter(context, actions)
                 } else if (action.text == getString(R.string.snap)) {
@@ -1168,6 +1167,13 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
                         AppUtils.makeLaunchBounds(this, "fullscreen", dockHeight)
                     )
                     windowManager.removeView(view)
+                } else if (action.text == getString(R.string.dock)) {
+                    activityManagerWrapper?.resizeTask(
+                        app.tasks[0].id,
+                        AppUtils.makeLaunchBounds(this, "dock", dockHeight)
+                    )
+                    showFreeformControlOverlay(app)
+                    windowManager.removeView(view)
                 } else if (action.text == getString(R.string.top)) {
                     activityManagerWrapper?.resizeTask(
                         app.tasks[0].id,
@@ -1189,6 +1195,53 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
             }
         }
         windowManager.addView(view, layoutParams)
+    }
+
+    private fun showFreeformControlOverlay(app: DockApp) {
+        freeformControlOverlay?.let {
+            windowManager.removeView(it)
+        }
+
+        val container = android.widget.LinearLayout(this)
+        container.orientation = android.widget.LinearLayout.HORIZONTAL
+        container.setPadding(12, 8, 12, 8)
+
+        fun addControl(text: String, action: () -> Unit) {
+            val button = android.widget.Button(this)
+            button.text = text
+            button.setOnClickListener { action() }
+            container.addView(button)
+        }
+
+        addControl("缩小到Dock") {
+            activityManagerWrapper?.resizeTask(
+                app.tasks[0].id,
+                AppUtils.makeLaunchBounds(this, "dock", dockHeight)
+            )
+        }
+        addControl("全屏") {
+            activityManagerWrapper?.resizeTask(
+                app.tasks[0].id,
+                AppUtils.makeLaunchBounds(this, "fullscreen", dockHeight)
+            )
+        }
+        addControl("关闭") {
+            activityManagerWrapper?.removeTask(app.tasks[0].id)
+            freeformControlOverlay?.let { windowManager.removeView(it) }
+            freeformControlOverlay = null
+        }
+
+        val params = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            android.graphics.PixelFormat.TRANSLUCENT
+        )
+        params.gravity = Gravity.TOP or Gravity.END
+        params.y = 80
+        freeformControlOverlay = container
+        windowManager.addView(container, params)
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -1421,11 +1474,8 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
     }
 
     private fun updateDockTrigger() {
-        if (!isPinned) {
-            val height = sharedPreferences.getString("dock_activation_area", "10")!!.toInt()
-            dockLayoutParams.height = Utils.dpToPx(context, height)
-            windowManager.updateViewLayout(dock, dockLayoutParams)
-        }
+        if (!isPinned)
+            updateDockBounds()
     }
 
     private fun updateActivationMethod() {
@@ -1433,8 +1483,8 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
             val method = sharedPreferences.getString("activation_method", "swipe")
             if (method == "swipe") {
                 dockHandle!!.visibility = View.GONE
-                updateDockTrigger()
                 dock!!.visibility = View.VISIBLE
+                updateDockTrigger()
             } else {
                 dock!!.visibility = View.GONE
                 dockHandle!!.visibility = View.VISIBLE
@@ -1449,6 +1499,54 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
             dockLayoutParams.height = dockHeight
             windowManager.updateViewLayout(dock, dockLayoutParams)
         }
+    }
+
+    private fun getDockDisplayId(): Int {
+        return if (preferSecondaryDisplay && DeviceUtils.getDisplays(context).size > 1)
+            DeviceUtils.getSecondaryDisplay(context).displayId
+        else
+            Display.DEFAULT_DISPLAY
+    }
+
+    private fun getDockWidth(): Int {
+        val sideMargin = Utils.dpToPx(context, 8)
+        val displayWidth = DeviceUtils.getDisplayBounds(context, getDockDisplayId()).width()
+        return (displayWidth - sideMargin * 2).coerceAtLeast(1)
+    }
+
+    private fun isSwipeTriggerActive(): Boolean {
+        return !isPinned && ::dockLayout.isInitialized && dockLayout.isGone &&
+                sharedPreferences.getString("activation_method", "swipe") == "swipe"
+    }
+
+    private fun updateDockBounds() {
+        if (!::dockLayoutParams.isInitialized || !::windowManager.isInitialized)
+            return
+        val dockView = dock ?: return
+        if (!dockView.isAttachedToWindow)
+            return
+
+        val swipeTriggerActive = isSwipeTriggerActive()
+        if (swipeTriggerActive) {
+            // A full-width transparent overlay blocks touches in apps underneath even when
+            // the listener returns false. Keep only a compact edge target while hidden.
+            val position = sharedPreferences.getString("handle_position", "start")
+            dockLayoutParams.width = Utils.dpToPx(context, 48)
+            dockLayoutParams.height = Utils.dpToPx(
+                context,
+                sharedPreferences.getString("dock_activation_area", "10")!!.toInt()
+            )
+            dockLayoutParams.gravity =
+                Gravity.BOTTOM or if (position == "start") Gravity.START else Gravity.END
+            dockLayoutParams.x = Utils.dpToPx(context, 8)
+        } else {
+            dockLayoutParams.width = getDockWidth()
+            dockLayoutParams.height = dockHeight
+            dockLayoutParams.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            dockLayoutParams.x = 0
+        }
+        dockLayoutParams.y = Utils.dpToPx(context, 10)
+        windowManager.updateViewLayout(dockView, dockLayoutParams)
     }
 
     private fun placeRunningApps() {
@@ -1533,6 +1631,7 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
         updateBatteryBtn()
         if (appMenuVisible)
             hideAppMenu()
+        dock?.post { updateDockBounds() }
     }
 
     private fun updateDockShape() {
@@ -2137,7 +2236,11 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
                 if (direction == Direction.DOWN) {
                     if (appMenuVisible) hideAppMenu() else unpinDock()
                 } else if (direction == Direction.UP) {
-                    if (!appMenuVisible) showAppMenu()
+                    if (dockLayout.isGone) {
+                        showDock()
+                    } else if (!appMenuVisible) {
+                        showAppMenu()
+                    }
                 } else if (direction == Direction.LEFT) {
                     performGlobalAction(GLOBAL_ACTION_BACK)
                 }
@@ -2203,15 +2306,8 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
 
         dockHeight =
             Utils.dpToPx(context, sharedPreferences.getString("dock_height", "56")!!.toInt())
-        val dockSideMargin = Utils.dpToPx(context, 8)
-        val dockBottomMargin = Utils.dpToPx(context, 10)
-        val dockDisplayId =
-            if (preferSecondaryDisplay) DeviceUtils.getSecondaryDisplay(context).displayId
-            else Display.DEFAULT_DISPLAY
-        val dockWidth =
-            (DeviceUtils.getDisplayBounds(context, dockDisplayId).width() - dockSideMargin * 2).coerceAtLeast(Utils.dpToPx(context, 240))
         dockLayoutParams =
-            Utils.makeWindowParams(dockWidth, dockHeight, context, preferSecondaryDisplay)
+            Utils.makeWindowParams(getDockWidth(), dockHeight, context, preferSecondaryDisplay)
         dockLayoutParams.screenOrientation =
             if (sharedPreferences.getBoolean("lock_landscape", false))
                 ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
@@ -2227,7 +2323,7 @@ class DockService : AccessibilityService(), OnSharedPreferenceChangeListener, On
         placeRunningApps()
 
         dockLayoutParams.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-        dockLayoutParams.y = dockBottomMargin
+        dockLayoutParams.y = Utils.dpToPx(context, 10)
         windowManager.addView(dock, dockLayoutParams)
 
         //Dock handle

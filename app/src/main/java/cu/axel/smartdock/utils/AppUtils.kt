@@ -26,6 +26,7 @@ import cu.axel.smartdock.models.WINDOWING_MODE_FULLSCREEN
 import cu.axel.smartdock.wrappers.ActivityManagerWrapper
 import java.io.File
 import kotlin.math.max
+import kotlin.math.min
 
 object AppUtils {
     const val PINNED_LIST = "pinned.lst"
@@ -316,10 +317,20 @@ object AppUtils {
             }
 
             "portrait" -> {
-                left = deviceWidth / 3
-                top = usableHeight / 15
-                right = deviceWidth - left
-                bottom = usableHeight + dockHeight - top
+                // Keep a usable portrait window on landscape displays. The old
+                // calculation used one third of the width as a side margin,
+                // which made portrait apps become extremely narrow on tablets.
+                val portraitWidth = min(deviceWidth * 2 / 3, usableHeight * 2 / 3)
+                left = (deviceWidth - portraitWidth) / 2
+                top = max(statusBarHeight, (usableHeight - portraitWidth * 3 / 2) / 2)
+                right = left + portraitWidth
+                bottom = min(usableHeight + dockHeight, top + portraitWidth * 3 / 2)
+            }
+
+            "dock" -> {
+                right = deviceWidth
+                bottom = usableHeight
+                top = usableHeight - max(dockHeight * 3, deviceHeight / 4)
             }
 
             "tiled-left" -> {

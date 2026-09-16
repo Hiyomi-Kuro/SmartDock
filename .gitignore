@@ -13,3 +13,5 @@
 .externalNativeBuild
 .cxx
 local.properties
+.codex-tmp
+.codex-verification

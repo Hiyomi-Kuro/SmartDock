@@ -369,7 +369,14 @@ object DeviceUtils {
     }
 
     fun canDrawOverOtherApps(context: Context): Boolean {
-        return Settings.canDrawOverlays(context)
+        // Some OEM ROMs (observed on Huawei test devices) report the overlay
+        // AppOp as allowed while Settings.canDrawOverlays() still returns false.
+        // Use the AppOp result as a fallback so the permission state shown in
+        // Smart Dock matches the actual ability to create overlay windows.
+        return Settings.canDrawOverlays(context) || checkAppOpsPermission(
+            context,
+            AppOpsManager.OPSTR_SYSTEM_ALERT_WINDOW
+        )
     }
 
     @Suppress("DEPRECATION")
